@@ -1,0 +1,27 @@
+{
+  "name": "promise-clerk",
+  "version": "0.0.1",
+  "description": "A clerk is a white-collar worker who conducts general office tasks. The promise-clerk package conducts general Promise-related tasks.",
+  "main": "lib/index.js",
+  "scripts": {
+    "test": "jest --watch",
+    "build": "babel src -d lib"
+  },
+  "keywords": [
+    "promise",
+    "utility",
+    "asynchronous"
+  ],
+  "author": "Petrofeed Inc.",
+  "license": "MIT",
+  "devDependencies": {
+    "babel-cli": "^6.26.0",
+    "babel-jest": "^22.2.2",
+    "babel-polyfill": "^6.26.0",
+    "babel-preset-env": "^1.6.1",
+    "jest-cli": "^22.3.0"
+  },
+  "dependencies": {
+    "ordinal": "^1.0.2"
+  }
+}
