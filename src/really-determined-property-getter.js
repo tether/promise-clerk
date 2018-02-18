@@ -41,7 +41,6 @@ export default class ReallyDeterminedPropertyGetter {
       secondarySources: [],
       primarySourceSynchronizers: []
     }
-    this.getterState = {}
     this.verifyValue = this.verifyValue.bind(this)
   }
 
@@ -120,46 +119,70 @@ export default class ReallyDeterminedPropertyGetter {
    * @api public
    */
   get () {
-    if (this.getterState.inProgress) throw new Error('`get` was called again before the first call to `get` completed. This will produce unexpected behavior and is not allowed.')
+    if (this.getInProgress) throw new Error('`get` was called again before the first call to `get` completed. This will produce unexpected behavior and is not allowed.')
     if (!this.configuration.primarySource) throw new Error('Cannot get value without a primary source. Use `.primarySource(() => primarySourcePromise)`')
-    this.resetState()
+
+    const errorCatcher = new PromiseChainErrorCatcher()
+    const quitter = new Quitter()
+    this.getInProgress = true
 
     return assertIsPromise(this.configuration.primarySource())
       .then(this.verifyValue)
-      .catch(this.getterState.results.nameError('primary source'))
-      .catch(primaryError => {
-        let secondaryPromise = Promise.reject(primaryError)
+      .catch(errorCatcher.nameError('primary source'))
+      .catch(primaryError => this.getFromSecondaries(errorCatcher, quitter, primaryError))
+      .then(value => { this.getInProgress = false; return value })
+      .catch(error => { this.getInProgress = false; throw error })
+      .catch(errorCatcher.handleFinalError())
+  }
 
-        this.configuration.secondarySources.forEach((secondarySource, index) => {
-          const name = 'secondary source #' + (index + 1)
-          secondaryPromise = secondaryPromise
-            .catch(secondaryError => {
-              this.getterState.quitter.maybeQuit(secondaryError)
-              this.getterState.results.push(secondaryError)
-              let newPromise = assertIsPromise(secondarySource(), 'secondarySource')
-                .then(this.verifyValue)
-                .catch(this.getterState.results.nameError(name))
-                .then(this.getterState.results.recordSuccess(name))
-
-              this.configuration.primarySourceSynchronizers.forEach((primarySourceSynchronizer, index) => {
-                const name = 'primarySourceSynchronizer function #' + (index + 1)
-                newPromise = newPromise.then(value => {
-                  return Promise.resolve()
-                    .then(() => assertIsPromise(primarySourceSynchronizer(value)))
-                    .catch(this.getterState.results.nameError(name))
-                    .catch(this.getterState.quitter.quitOnCondition(!this.configuration.ignoreSynchronizationErrors))
-                    .then(() => value)
-                })
-              })
-
-              return newPromise
-            })
+  /**
+   * getFromSecondaries attempts to get the value from each of the secondary sources in order
+   *
+   * @param {PromiseChainErrorCatcher} errorCatcher
+   * @param {Quitter} quitter
+   * @param {Error} primaryError
+   * @return {Promise}
+   * @api private
+   */
+  getFromSecondaries (errorCatcher, quitter, primaryError) {
+    let secondaryPromise = Promise.reject(primaryError)
+    this.configuration.secondarySources.forEach((secondarySource, index) => {
+      const name = 'secondary source #' + (index + 1)
+      secondaryPromise = secondaryPromise
+        .catch(secondaryError => {
+          quitter.maybeQuit(secondaryError)
+          errorCatcher.push(secondaryError)
+          return assertIsPromise(secondarySource(), 'secondarySource')
+            .then(this.verifyValue)
+            .catch(errorCatcher.nameError(name))
+            .then(errorCatcher.recordSuccess(name))
+            .then(value => this.performSynchronizationWithPrimary(errorCatcher, quitter, value))
         })
-        return secondaryPromise
-      })
-      .then(value => { this.getterState.inProgress = false; return value })
-      .catch(error => { this.getterState.inProgress = false; throw error })
-      .catch(this.getterState.results.handleFinalError())
+    })
+    return secondaryPromise
+  }
+
+  /**
+   * performSynchronizationWithPrimary synchronizes the found value with the primary source
+   *
+   * @param {PromiseChainErrorCatcher} errorCatcher
+   * @param {Quitter} quitter
+   * @param {Object} value
+   * @return {Promise}
+   * @api private
+   */
+  performSynchronizationWithPrimary (errorCatcher, quitter, value) {
+    let syncPromise = Promise.resolve(value)
+    this.configuration.primarySourceSynchronizers.forEach((primarySourceSynchronizer, index) => {
+      const name = 'primarySourceSynchronizer function #' + (index + 1)
+      syncPromise = syncPromise
+        .then(() => assertIsPromise(primarySourceSynchronizer(value)))
+        .catch(errorCatcher.nameError(name))
+        .catch(quitter.quitOnCondition(!this.configuration.ignoreSynchronizationErrors))
+        .then(() => value)
+
+    })
+    return syncPromise
   }
 
   /**
@@ -176,20 +199,6 @@ export default class ReallyDeterminedPropertyGetter {
       throw new Error(`the verifier function did not accept the value ${JSON.stringify(value)}`)
     } else {
       return value
-    }
-  }
-
-  /**
-   * initialize/reset all state related to executing the `get` method
-   *
-   * @api private
-   */
-  resetState () {
-    this.getterState = {
-      quitter: new Quitter(),
-      inProgress: true,
-      currentSecondarySource: 0,
-      results: new PromiseChainErrorCatcher()
     }
   }
 }
