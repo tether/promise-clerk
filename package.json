@@ -5,6 +5,7 @@
   "main": "lib/index.js",
   "scripts": {
     "standard": "standard --fix",
+    "prepare": "npm run build",
     "doc": "doctoc ./README.md",
     "clean": "rm -rf lib",
     "test": "jest",
