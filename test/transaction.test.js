@@ -76,6 +76,20 @@ describe('Transaction', () => {
       expect(onSuccess).toHaveBeenCalled()
     })
 
+    it('offers `then` as an alternative to onSuccess', async () => {
+      let resolveStep5
+      steps.step5.result = new Promise((resolve, reject) => { resolveStep5 = () => resolve() })
+      const thenBlock = jasmine.createSpy('thenBlock')
+      transaction.then(thenBlock)
+      transaction.execute()
+      await flushPromises()
+      expect(thenBlock).not.toHaveBeenCalled()
+
+      resolveStep5()
+      await flushPromises()
+      expect(thenBlock).toHaveBeenCalled()
+    })
+
     it('calls the most recently provided onSuccess callback when the last step\'s Promise resolves', async () => {
       const firstOnSuccess = jasmine.createSpy('firstOnSuccess')
       const secondOnSuccess = jasmine.createSpy('secondOnSuccess')

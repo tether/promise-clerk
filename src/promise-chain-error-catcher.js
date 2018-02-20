@@ -5,7 +5,8 @@
  * @api public
  */
 export default class PromiseChainErrorCatcher {
-  constructor () {
+  constructor (callingEntityName) {
+    this.callingEntityName = callingEntityName
     this.results = []
     this.catchError = this.catchError.bind(this)
   }
@@ -44,7 +45,7 @@ export default class PromiseChainErrorCatcher {
     }
   }
 
-  handleFinalError (resultsObject) {
+  handleFinalError () {
     return finalError => {
       this.push(finalError)
       throw this.reportError()
@@ -58,10 +59,10 @@ export default class PromiseChainErrorCatcher {
    * @api public
    */
   reportError (errorFilters) {
-    let errorMessage = 'The Really Determined Property Getter has failed.\n'
+    let errorMessage = `${this.callingEntityName} has failed.\n`
     this.results.forEach((oneError, index) => {
-      if(oneError.tag) {
-        filter = this.errorFilters[oneError.tag]
+      if (oneError.tag) {
+        const filter = this.errorFilters[oneError.tag]
         filter && filter(oneError)
       }
       const stepName = oneError.stepName
@@ -72,4 +73,3 @@ export default class PromiseChainErrorCatcher {
     return new Error(errorMessage)
   }
 }
-

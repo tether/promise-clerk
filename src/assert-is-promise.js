@@ -6,7 +6,7 @@
  * @api public
  */
 export default function assertIsPromise (maybeAPromise) {
-  if(maybeAPromise && maybeAPromise.then) {
+  if (maybeAPromise && maybeAPromise.then) {
     return maybeAPromise.catch(error => {
       error.message = `it was rejected with '${error.toString()}'`
       throw error
@@ -15,5 +15,3 @@ export default function assertIsPromise (maybeAPromise) {
     return Promise.reject(new Error(`it was expected to return a Promise, but instead it returned ${JSON.stringify(maybeAPromise)}`))
   }
 }
-
-

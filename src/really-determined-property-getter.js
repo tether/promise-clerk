@@ -2,39 +2,6 @@ import PromiseChainErrorCatcher from './promise-chain-error-catcher'
 import assertIsPromise from './assert-is-promise'
 import Quitter from './quitter'
 
-/**
- * ReallyDeterminedPropertyGetter provides a way to define an external value (e.g. accessible via some API)
- *   with one or more secondary data sources to fall back to in case the primary one is unavailable
- *
- *    const movieListing = await new ReallyDeterminedPropertyGetter()
- *      .verify(movies => movies.length === movieTitles.length)
- *      .primarySource(() => mainAPI.getMovieListingsPromise(movieTitles))
- *      .secondarySource(() => Promise.all(movieTitles.map(title => otherAPI.getMovie(title))))
- *      .secondarySource(() => new Promise((resolve, reject) =>
- *        oldSchoolHttpGet('https://movies.com?titles=' + movieTitles,join(','), (err, results) => err ? reject(err) : resolve(results))
- *      ))
- *      .synchronizeWithPrimarySource(movies => mainAPI.updateMovieListings(movies))
- *      .ignoreSynchronizationErrors() // Only if you don't care whether mainApi.updateMovieListings() succeeds or fails
- *      .get()
- *
- *  The basic algorithm is:
- *    - if no `verify` method is provided, consider all values verified. Otherwise, a value is considered verified if the `verify` method returns true when provided the value
- *    - try getting the value from a primary source, return it if found and verified
- *    - try getting value from a secondary source, return it if found and verified
- *    - repeat until the value is found and verified or we're out of sources
- *
- *  Available methods are:
- *    - primarySource(getter: Function<Promise>)         // Required, may only be called once. Register a primary source
- *    - secondarySource(getter: Function<Promise>)       // Optional, may be called any number of times. Register a secondary source (will be attempted in the order added)
- *    - verify(verify: (value) => boolean)               // Optional, may only be called once. Will be called for each found value. Values for which `verify` returns false will be ignored
- *    - synchronizeWithPrimarySource((value) => Promise) // Optional, may be called any number of times. Registers a callback which is called if the primary source fails but a secondary source succeeds
- *    - ignoreSynchronizationErrors()                    // Optional. If it has been called, then any errors produced by a primarySourceSynchronizer function are ignored instead of causing the main `get` method to reject
- *    - get()                                            // Returns a Promise which resolves with the result, if available. May be called repeatedly as long as the returned Promise resolves before calling `get` again
- *
- * Note: this class uses the Builder Pattern (read more: https://en.wikipedia.org/wiki/Builder_pattern) to avoid having a long list of constructor arguments,
- *  some being optional, others required, etc..
- *
- */
 export default class ReallyDeterminedPropertyGetter {
   constructor () {
     this.configuration = {
@@ -122,7 +89,7 @@ export default class ReallyDeterminedPropertyGetter {
     if (this.getInProgress) throw new Error('`get` was called again before the first call to `get` completed. This will produce unexpected behavior and is not allowed.')
     if (!this.configuration.primarySource) throw new Error('Cannot get value without a primary source. Use `.primarySource(() => primarySourcePromise)`')
 
-    const errorCatcher = new PromiseChainErrorCatcher()
+    const errorCatcher = new PromiseChainErrorCatcher('The Really Determined Property Getter')
     const quitter = new Quitter()
     this.getInProgress = true
 
@@ -180,7 +147,6 @@ export default class ReallyDeterminedPropertyGetter {
         .catch(errorCatcher.nameError(name))
         .catch(quitter.quitOnCondition(!this.configuration.ignoreSynchronizationErrors))
         .then(() => value)
-
     })
     return syncPromise
   }

@@ -1,29 +1,9 @@
 import ordinal from 'ordinal'
 
 /**
- * Transaction class provides a robust way to run a series of asynchronous functions in sequence
- *
- *    const transaction = new Transaction([
- *      () => doThingOne(),
- *      () => doThingTwo()
- *      () => doThingThree()
- *    ])
- *
- *    transaction.onSuccess(() => tellUserThatOperationSucceeded())
- *    transaction.onResume(() => showLoadingIndicator())
- *    transaction.onSpecificError('404', () => specialHandlingOf404Error())
- *    transaction.onSpecificError(/5\d\d/, () => specialHandlingOf5xxError())
- *    transaction.onError(error => {
- *      tellUserThatSomethingWentWrong(error.message)
- *        .then(userAnswer => {
- *          if(userAnswer === 'try again') {
- *            transaction.resume() // Repeats the failed step and continues with subsequent steps
- *          }
- *        })
- *    })
+ * Transaction class
  *
  * @param {Array<Function>} steps
- * @api public
  */
 export default class Transaction {
   constructor (steps) {
@@ -70,6 +50,16 @@ export default class Transaction {
    */
   onSuccess (callback) {
     this.callbacks.onSuccess = callback
+  }
+
+  /**
+   * then registers a callback which will be called when the last step completes successfully
+   *
+   * @param {Function} callback
+   * @api public
+   */
+  then (callback) {
+    this.onSuccess(callback)
   }
 
   /**
