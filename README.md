@@ -20,9 +20,11 @@ A clerk is a white-collar worker who conducts general office tasks. The promise-
     - [`Quitter`](#quitter)
     - [`ReallyDeterminedPropertyGetter`](#reallydeterminedpropertygetter)
     - [`Transaction`](#transaction)
-- [Contributing](#contributing)
+- [Questions](#questions)
+- [Contribution](#contribution)
   - [Testing](#testing)
   - [Style Guide](#style-guide)
+- [Question](#question)
 - [License](#license)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
@@ -30,12 +32,7 @@ A clerk is a white-collar worker who conducts general office tasks. The promise-
 ### Installing
 
 ```shell
-git submodule add https://github.com/tether/promise-clerk.git lib/promise-clerk
-```
-
-Once we deploy it to npm, you can run
-```shell
-npm install --save promise-clerk
+npm install --save github:tether/promise-clerk#v1.0.0
 ```
 
 ### Overview
